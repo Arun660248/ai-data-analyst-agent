@@ -1,0 +1,307 @@
+{
+  "name": "My Business Data Analyst",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -224,
+        -384
+      ],
+      "id": "3f26d8f6-a30b-4b22-be6d-0c6cbd0031d1",
+      "name": "When chat message received",
+      "webhookId": "46e2a088-5619-4670-9ff2-cee0e405681f"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -240
+      ],
+      "id": "88fc57ad-816f-4000-ac44-7f5d29f87834",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "oL4BgXptUMQ350Kr",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a sales data analyst. Extract ALL salespeople from the user's message.\n\nRespond with ONLY this JSON structure (no other text):\n\n{\"rows\":[{\"salesperson\":\"NAME\",\"items_sold\":NUMBER,\"price_per_item\":NUMBER,\"total_revenue\":NUMBER}]\n\nCRITICAL RULES:\n- Extract EVERY person mentioned (if user mentions 3 people, return 3 rows)\n- Use field names EXACTLY: rows, salesperson, items_sold, price_per_item, total_revenue\n- total_revenue per row = items_sold × price_per_item\n- Numbers are numbers (no quotes, no $ signs)\n- Top performer = person with highest total_revenue\n- Start response with { and end with }\n- NO markdown, NO explanations, NO code blocks"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        -384
+      ],
+      "id": "b6f5f6c6-7eea-43be-94dc-a0bd61719365",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gRh-7deDWIQQvVHXeI9BwnDrLmA-VsJDXeMUmZULuiI",
+          "mode": "list",
+          "cachedResultName": "\"AI Data Analyst - Sales\"",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gRh-7deDWIQQvVHXeI9BwnDrLmA-VsJDXeMUmZULuiI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gRh-7deDWIQQvVHXeI9BwnDrLmA-VsJDXeMUmZULuiI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{$json.Date}}",
+            "Salesperson": "={{$json.Salesperson}}",
+            "Items Sold": "={{$json.Items_Sold}}",
+            "Price Per Item": "={{$json.Price_Per_Item}}",
+            "Total Revenue": "={{$json.Total_Revenue}}"
+          },
+          "matchingColumns": [
+            "Salesperson"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Salesperson",
+              "displayName": "Salesperson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Items Sold",
+              "displayName": "Items Sold",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price Per Item",
+              "displayName": "Price Per Item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Revenue",
+              "displayName": "Total Revenue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        -384
+      ],
+      "id": "19d2ef72-0c45-4666-843a-024c5007cc62",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lNlZtTlCpcJPCwpi",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get AI output\nconst inputData = $input.first().json;\nlet aiOutput = inputData.output || inputData.text || '';\n\nif (typeof aiOutput !== 'string') {\n  aiOutput = JSON.stringify(aiOutput);\n}\n\n// Clean up\naiOutput = aiOutput.trim().replace(/```json\\s*/gi, '').replace(/```\\s*/g, '');\n\n// Try to parse JSON\nlet parsed;\ntry {\n  parsed = JSON.parse(aiOutput);\n} catch (e1) {\n  const jsonMatch = aiOutput.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      return [{\n        json: {\n          Date: new Date().toISOString().split('T')[0],\n          Salesperson: 'PARSE_ERROR',\n          Items_Sold: 0,\n          Price_Per_Item: 0,\n          Total_Revenue: 0,\n          Top_Performer: '',\n          Insights: 'Error: ' + e2.message + ' | Raw: ' + aiOutput.substring(0, 150)\n        }\n      }];\n    }\n  } else {\n    return [{\n      json: {\n        Date: new Date().toISOString().split('T')[0],\n        Salesperson: 'NO_JSON',\n        Items_Sold: 0,\n        Price_Per_Item: 0,\n        Total_Revenue: 0,\n        Top_Performer: '',\n        Insights: aiOutput.substring(0, 200)\n      }\n    }];\n  }\n}\n\n// Accept both \"rows\" and \"records\" field names\nconst rowsArray = parsed.rows || parsed.records || parsed.data || [];\n\nif (!Array.isArray(rowsArray) || rowsArray.length === 0) {\n  return [{\n    json: {\n      Date: new Date().toISOString().split('T')[0],\n      Salesperson: 'NO_ROWS',\n      Items_Sold: 0,\n      Price_Per_Item: 0,\n      Total_Revenue: 0,\n      Top_Performer: '',\n      Insights: 'AI response had no rows: ' + JSON.stringify(parsed).substring(0, 200)\n    }\n  }];\n}\n\nconst today = new Date().toISOString().split('T')[0];\nconst topPerformer = parsed.top_performer || parsed.topPerformer || '';\nconst insights = parsed.insights || '';\n\n// Map each row, accepting multiple field name variations\nconst items = rowsArray.map(row => {\n  const name = row.salesperson || row.name || 'Unknown';\n  const items_sold = Number(row.items_sold || row.itemsSold || row.items || 0);\n  const price = Number(row.price_per_item || row.pricePerItem || row.price || 0);\n  const total = Number(row.total_revenue || row.totalSales || row.totalRevenue || row.total || (items_sold * price));\n  \n  return {\n    json: {\n      Date: today,\n      Salesperson: String(name),\n      Items_Sold: items_sold,\n      Price_Per_Item: price,\n      Total_Revenue: total,\n      Top_Performer: String(topPerformer),\n      Insights: String(insights)\n    }\n  };\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -384
+      ],
+      "id": "716c5298-88da-4898-a2df-b5d98e7d4f14",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(item => item.json);\n\nconst pick = (obj, keys, fallback = '') => {\n  for (const k of keys) {\n    if (obj[k] !== undefined && obj[k] !== null) return obj[k];\n  }\n  return fallback;\n};\n\nconst data = rows.map(r => ({\n  salesperson: String(pick(r, ['Salesperson', 'salesperson'])),\n  itemsSold: Number(pick(r, ['Items Sold', 'items_sold', 'itemsSold'], 0)),\n  pricePerItem: Number(pick(r, ['Price Per Item', 'price_per_item', 'pricePerItem'], 0)),\n  totalRevenue: Number(pick(r, ['Total Revenue', 'total_revenue', 'totalSales'], 0)),\n}));\n\nconst labels = data.map(d => d.salesperson);\nconst revenue = data.map(d => d.totalRevenue);\nconst totalSales = revenue.reduce((a, b) => a + b, 0);\nconst top = data.reduce((best, cur) => (cur.totalRevenue > best.totalRevenue ? cur : best), data[0]);\n\nconst colors = ['#4F46E5', '#06B6D4', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6'];\n\nconst barConfig = {\n  type: 'bar',\n  data: {\n    labels,\n    datasets: [{\n      label: 'Revenue ($)',\n      data: revenue,\n      backgroundColor: colors,\n      borderRadius: 8,\n    }]\n  },\n  options: {\n    plugins: {\n      legend: { display: false },\n      title: { display: true, text: 'Revenue by Salesperson', color: '#111827', font: { size: 18 } }\n    },\n    scales: {\n      y: { beginAtZero: true, ticks: { color: '#374151' } },\n      x: { ticks: { color: '#374151' } }\n    }\n  }\n};\n\nconst pieConfig = {\n  type: 'pie',\n  data: {\n    labels,\n    datasets: [{ data: revenue, backgroundColor: colors }]\n  },\n  options: {\n    plugins: {\n      title: { display: true, text: 'Revenue Share (%)', color: '#111827', font: { size: 18 } },\n      legend: { position: 'bottom' }\n    }\n  }\n};\n\nconst lineConfig = {\n  type: 'line',\n  data: {\n    labels,\n    datasets: [{\n      label: 'Revenue Trend',\n      data: revenue,\n      borderColor: '#4F46E5',\n      backgroundColor: 'rgba(79,70,229,0.2)',\n      fill: true,\n      tension: 0.35,\n      pointRadius: 5\n    }]\n  },\n  options: {\n    plugins: {\n      title: { display: true, text: 'Revenue Trend Line', color: '#111827', font: { size: 18 } }\n    },\n    scales: {\n      y: { beginAtZero: true, ticks: { color: '#374151' } },\n      x: { ticks: { color: '#374151' } }\n    }\n  }\n};\n\nconst base = 'https://quickchart.io/chart';\nconst chartUrl = (cfg, w = 900, h = 500) =>\n  `${base}?w=${w}&h=${h}&bkg=white&c=${encodeURIComponent(JSON.stringify(cfg))}`;\n\nconst barUrl = chartUrl(barConfig);\nconst pieUrl = chartUrl(pieConfig, 700, 700);\nconst lineUrl = chartUrl(lineConfig);\n\nconst summary = data.map(d => `- ${d.salesperson}: ${d.itemsSold} x $${d.pricePerItem} = $${d.totalRevenue}`).join('\\n');\n\nreturn [{\n  json: {\n    output:\n`Saved ${data.length} rows to Google Sheets.\n\nSummary:\n${summary}\n\nTop seller: ${top.salesperson} ($${top.totalRevenue})\nTotal sales: $${totalSales}\n\nBar chart: ${barUrl}\nPie chart: ${pieUrl}\nLine chart: ${lineUrl}`,\n    barChartUrl: barUrl,\n    pieChartUrl: pieUrl,\n    lineChartUrl: lineUrl,\n    totalSales,\n    topSeller: top.salesperson\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -384
+      ],
+      "id": "f9185c91-8b3d-4e3e-8f34-f1035de3cc9f",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "sendTo": "arunjyotichakraborty18@gmail.com",
+        "subject": "=📊 Sales Report — Top Seller: {{ $json.topSeller }} \n Total: ${{ $json.totalSales }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;background:#ffffff;\">   <div style=\"background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:32px 24px;border-radius:12px 12px 0 0;\">     <h1 style=\"color:#fff;margin:0;font-size:24px;\">📊 Sales Analysis Report</h1>     <p style=\"color:#E0E7FF;margin:8px 0 0;\">Generated automatically</p>   </div>   <div style=\"padding:24px;border:1px solid #e5e7eb;border-top:0;\">     <h2 style=\"color:#111827;\">Summary</h2>     <p><strong>Top Seller:</strong> {{ $json.topSeller }}</p>     <p><strong>Total Sales:</strong> ${{ $json.totalSales }}</p>     <h2 style=\"color:#111827;\">📈 Revenue Chart</h2>     <img src=\"{{ $json.barChartUrl }}\" style=\"width:100%;border-radius:8px;\" />     <h2 style=\"color:#111827;\">🥧 Distribution</h2>     <img src=\"{{ $json.pieChartUrl }}\" style=\"width:100%;max-width:420px;border-radius:8px;\" />   </div>   <div style=\"background:#4F46E5;color:#fff;padding:16px;border-radius:0 0 12px 12px;text-align:center;\">     <p style=\"margin:0;font-size:13px;\">Powered by AI Data Analyst Agent</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        -384
+      ],
+      "id": "f1cd161a-c88e-4d09-bccb-dfc2835be906",
+      "name": "Send a message",
+      "webhookId": "c63887a2-1831-4c75-aae3-a3ebec2818e7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "AxDng5szgdVUlStl",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        -240
+      ],
+      "id": "51c8bb8f-45fd-4b77-980b-fbb7e5c791a5",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "94359f3b-2b65-4eed-b591-d225c37de431",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "55ea333d58d77dee2b34216c6340fc530f683d56b0de49a201c618e4ec9758ae"
+  },
+  "id": "C7tLRj77MUfenXTt",
+  "tags": []
+}
